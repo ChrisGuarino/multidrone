@@ -4,3 +4,5 @@ numpy
 torch
 matplotlib 
 tensorboard
+stable_baselines3
+pybullet
