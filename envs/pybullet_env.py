@@ -18,7 +18,14 @@ class DroneEnv(gym.Env):
         
         p.setAdditionalSearchPath(pybullet_data.getDataPath())
         p.setGravity(0, 0, -9.81)
-
+        
+        #Viewport camera settings
+        p.resetDebugVisualizerCamera(
+            cameraDistance=25,
+            cameraYaw=90,
+            cameraPitch=-70,
+            cameraTargetPosition=[0, 0, 0.5]
+            )
         # Action space: 4 continuous motor thrusts
         self.action_space = spaces.Box(low=-1.0, high=1.0, shape=(4,), dtype=np.float32)
 
@@ -26,14 +33,17 @@ class DroneEnv(gym.Env):
         self.observation_space = spaces.Box(low=-np.inf, high=np.inf, shape=(6,), dtype=np.float32)
 
         # Load plane and drone
-        self.plane = p.loadURDF("plane.urdf")
-        self.drone = p.loadURDF("assets/quadrotor.urdf", [0, 0, 1])
+        self.plane = p.loadURDF("/Users/chrisguarino/Documents/Programming/multidrone/assets/maze.urdf")
+        self.drone = p.loadURDF("/Users/chrisguarino/Documents/Programming/multidrone/assets/quadrotor.urdf", [0, 0, 1])
 
     def reset(self, *, seed=None, options=None):
         p.resetSimulation()
         p.setGravity(0, 0, -9.81)
-        p.loadURDF("plane.urdf")
-        self.drone = p.loadURDF("assets/quadrotor.urdf", [0, 0, 1])
+
+        start_pos = [8.5, 1.5, -6.5]
+        start_ori = p.getQuaternionFromEuler([0, 0, 0])
+        self.plane = p.loadURDF("/Users/chrisguarino/Documents/Programming/multidrone/assets/maze.urdf")
+        self.drone = p.loadURDF("/Users/chrisguarino/Documents/Programming/multidrone/assets/quadrotor.urdf", basePosition=start_pos, baseOrientation=start_ori)
         self.step_counter = 0 #To truncate an episode
 
         obs = self._get_obs()
