@@ -27,13 +27,13 @@ class DroneEnv(gym.Env):
 
         # Load plane and drone
         self.plane = p.loadURDF("plane.urdf")
-        self.drone = p.loadURDF("/Users/chrisguarino/Documents/Programming/multidrone/assets/quadrotor.urdf", [0, 0, 1])
+        self.drone = p.loadURDF("assets/quadrotor.urdf", [0, 0, 1])
 
     def reset(self, *, seed=None, options=None):
         p.resetSimulation()
         p.setGravity(0, 0, -9.81)
         p.loadURDF("plane.urdf")
-        self.drone = p.loadURDF("/Users/chrisguarino/Documents/Programming/multidrone/assets/quadrotor.urdf", [0, 0, 1])
+        self.drone = p.loadURDF("assets/quadrotor.urdf", [0, 0, 1])
         self.step_counter = 0 #To truncate an episode
 
         obs = self._get_obs()

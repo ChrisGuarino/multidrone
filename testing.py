@@ -1,13 +1,14 @@
 # testing.py
 from stable_baselines3 import PPO
 from envs.pybullet_env import DroneEnv  # adjust import to your actual environment file
+import time
 
 def main():
     # Create your environment
     env = DroneEnv(render=True)
 
     # Load trained model
-    model = PPO.load("ppo_2025-07-22 14:45:00.705033", env=env)
+    model = PPO.load("ppo_2025-07-22 21:31:09.289375", env=env)
 
     # Reset environment
     obs, info = env.reset()
