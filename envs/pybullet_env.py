@@ -33,18 +33,42 @@ class DroneEnv(gym.Env):
         self.observation_space = spaces.Box(low=-np.inf, high=np.inf, shape=(6,), dtype=np.float32)
 
         # Load plane and drone
-        self.plane = p.loadURDF("/Users/chrisguarino/Documents/Programming/multidrone/assets/maze.urdf")
-        self.drone = p.loadURDF("/Users/chrisguarino/Documents/Programming/multidrone/assets/quadrotor.urdf", [0, 0, 1])
+        # self.maze = p.loadURDF("/Users/chrisguarino/Documents/Programming/multidrone/assets/maze.urdf")
+        col_id = p.createCollisionShape(
+            shapeType=p.GEOM_MESH,
+            fileName="/Users/chrisguarino/Documents/Programming/multidrone/assets/maze2.stl",
+            meshScale=[1.5, 1.5, 1.5],
+            flags=p.GEOM_FORCE_CONCAVE_TRIMESH
+        )
+        self.maze = p.createMultiBody(
+            baseMass=0,
+            baseCollisionShapeIndex=col_id,
+            basePosition=[0, 0, 0]
+        )
+        self.drone = p.loadURDF("/Users/chrisguarino/Documents/Programming/multidrone/assets/quadrotor.urdf")
+        print(p.getCollisionShapeData(self.maze, -1))
 
     def reset(self, *, seed=None, options=None):
         p.resetSimulation()
         p.setGravity(0, 0, -9.81)
 
-        start_pos = [8.5, 1.5, -6.5]
+        start_pos = [13, 0.5, 0.3]
         start_ori = p.getQuaternionFromEuler([0, 0, 0])
-        self.plane = p.loadURDF("/Users/chrisguarino/Documents/Programming/multidrone/assets/maze.urdf")
+        # self.maze = p.loadURDF("/Users/chrisguarino/Documents/Programming/multidrone/assets/maze.urdf", useMaximalCoordinates=True)
+        col_id = p.createCollisionShape(
+            shapeType=p.GEOM_MESH,
+            fileName="/Users/chrisguarino/Documents/Programming/multidrone/assets/maze2.stl",
+            meshScale=[1.5, 1.5, 1.5],
+            flags=p.GEOM_FORCE_CONCAVE_TRIMESH
+        )
+        self.maze = p.createMultiBody(
+            baseMass=0,
+            baseCollisionShapeIndex=col_id,
+            basePosition=[0, 0, 0]
+        )
         self.drone = p.loadURDF("/Users/chrisguarino/Documents/Programming/multidrone/assets/quadrotor.urdf", basePosition=start_pos, baseOrientation=start_ori)
         self.step_counter = 0 #To truncate an episode
+
 
         obs = self._get_obs()
         return obs, {}
