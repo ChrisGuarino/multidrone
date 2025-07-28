@@ -8,7 +8,7 @@ def main():
     env = DroneEnv(render=True)
 
     # Load trained model
-    model = PPO.load("ppo_2025-07-22 21:31:09.289375", env=env)
+    model = PPO.load("agents/ppo_2025-07-28 14:02:48.906766", env=env)
 
     # Reset environment
     obs, info = env.reset()
@@ -21,6 +21,7 @@ def main():
         obs, reward, terminated, truncated, info = env.step(action)
         done = terminated or truncated
 
+        print(obs, reward, terminated, truncated, {})
     # Cleanup
     env.close()
 

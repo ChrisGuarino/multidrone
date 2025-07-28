@@ -21,9 +21,9 @@ class DroneEnv(gym.Env):
         
         #Viewport camera settings
         p.resetDebugVisualizerCamera(
-            cameraDistance=25,
-            cameraYaw=90,
-            cameraPitch=-70,
+            cameraDistance=2.5,
+            cameraYaw=135,
+            cameraPitch=-5.6,
             cameraTargetPosition=[0, 0, 0.5]
             )
         # Action space: 4 continuous motor thrusts
@@ -33,35 +33,35 @@ class DroneEnv(gym.Env):
         self.observation_space = spaces.Box(low=-np.inf, high=np.inf, shape=(6,), dtype=np.float32)
 
         # Load plane and drone
-        # self.maze = p.loadURDF("/Users/chrisguarino/Documents/Programming/multidrone/assets/maze.urdf")
+        # self.stage = p.loadURDF("/Users/chrisguarino/Documents/Programming/multidrone/assets/stage.urdf")
         col_id = p.createCollisionShape(
             shapeType=p.GEOM_MESH,
-            fileName="/Users/chrisguarino/Documents/Programming/multidrone/assets/maze2.stl",
+            fileName="/Users/chrisguarino/Documents/Programming/multidrone/assets/platform.stl",
             meshScale=[1.5, 1.5, 1.5],
             flags=p.GEOM_FORCE_CONCAVE_TRIMESH
         )
-        self.maze = p.createMultiBody(
+        self.stage = p.createMultiBody(
             baseMass=0,
             baseCollisionShapeIndex=col_id,
             basePosition=[0, 0, 0]
         )
         self.drone = p.loadURDF("/Users/chrisguarino/Documents/Programming/multidrone/assets/quadrotor.urdf")
-        print(p.getCollisionShapeData(self.maze, -1))
+        print(p.getCollisionShapeData(self.stage, -1))
 
     def reset(self, *, seed=None, options=None):
         p.resetSimulation()
         p.setGravity(0, 0, -9.81)
 
-        start_pos = [13, 0.5, 0.3]
+        start_pos = [0, 0, 0.25]
         start_ori = p.getQuaternionFromEuler([0, 0, 0])
-        # self.maze = p.loadURDF("/Users/chrisguarino/Documents/Programming/multidrone/assets/maze.urdf", useMaximalCoordinates=True)
+        # self.stage = p.loadURDF("/Users/chrisguarino/Documents/Programming/multidrone/assets/stage.urdf", useMaximalCoordinates=True)
         col_id = p.createCollisionShape(
             shapeType=p.GEOM_MESH,
-            fileName="/Users/chrisguarino/Documents/Programming/multidrone/assets/maze2.stl",
+            fileName="/Users/chrisguarino/Documents/Programming/multidrone/assets/platform.stl",
             meshScale=[1.5, 1.5, 1.5],
             flags=p.GEOM_FORCE_CONCAVE_TRIMESH
         )
-        self.maze = p.createMultiBody(
+        self.stage = p.createMultiBody(
             baseMass=0,
             baseCollisionShapeIndex=col_id,
             basePosition=[0, 0, 0]
@@ -90,8 +90,15 @@ class DroneEnv(gym.Env):
 
         # Terminate if drone crashes or flies too high
         terminated = (z < 0.1) or (z > 2.0)
+        # print(f'Step: {self.step_counter}')
+        # if (z < 0.1): 
+        #     print('💥 CRASH!!!')
+        # elif (z > 2.0): 
+        #     print('🚀 TOO High!!!')
+        
+        # To control how many steps are okay in an episode. 
         truncated = self.step_counter >= self.max_steps
-
+        
         return obs, reward, terminated, truncated, {}
 
     def _get_obs(self):
