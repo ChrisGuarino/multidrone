@@ -26,6 +26,7 @@ class DroneEnv(gym.Env):
             cameraPitch=-5.6,
             cameraTargetPosition=[0, 0, 0.5]
             )
+        
         # Action space: 4 continuous motor thrusts
         self.action_space = spaces.Box(low=-1.0, high=1.0, shape=(4,), dtype=np.float32)
 
@@ -36,7 +37,7 @@ class DroneEnv(gym.Env):
         # self.stage = p.loadURDF("/Users/chrisguarino/Documents/Programming/multidrone/assets/stage.urdf")
         col_id = p.createCollisionShape(
             shapeType=p.GEOM_MESH,
-            fileName="/Users/chrisguarino/Documents/Programming/multidrone/assets/platform.stl",
+            fileName="../assets/platform.stl",
             meshScale=[1.5, 1.5, 1.5],
             flags=p.GEOM_FORCE_CONCAVE_TRIMESH
         )
@@ -45,19 +46,19 @@ class DroneEnv(gym.Env):
             baseCollisionShapeIndex=col_id,
             basePosition=[0, 0, 0]
         )
-        self.drone = p.loadURDF("/Users/chrisguarino/Documents/Programming/multidrone/assets/quadrotor.urdf")
+        self.drone = p.loadURDF("../assets/quadrotor.urdf")
         print(p.getCollisionShapeData(self.stage, -1))
 
     def reset(self, *, seed=None, options=None):
+        
         p.resetSimulation()
         p.setGravity(0, 0, -9.81)
 
-        start_pos = [0, 0, 0.25]
-        start_ori = p.getQuaternionFromEuler([0, 0, 0])
+        #Reset up the stage. 
         # self.stage = p.loadURDF("/Users/chrisguarino/Documents/Programming/multidrone/assets/stage.urdf", useMaximalCoordinates=True)
         col_id = p.createCollisionShape(
             shapeType=p.GEOM_MESH,
-            fileName="/Users/chrisguarino/Documents/Programming/multidrone/assets/platform.stl",
+            fileName="../assets/platform.stl",
             meshScale=[1.5, 1.5, 1.5],
             flags=p.GEOM_FORCE_CONCAVE_TRIMESH
         )
@@ -66,35 +67,65 @@ class DroneEnv(gym.Env):
             baseCollisionShapeIndex=col_id,
             basePosition=[0, 0, 0]
         )
-        self.drone = p.loadURDF("/Users/chrisguarino/Documents/Programming/multidrone/assets/quadrotor.urdf", basePosition=start_pos, baseOrientation=start_ori)
-        self.step_counter = 0 #To truncate an episode
 
+        #Reset Up drone
+        start_pos = [0, 0, 0.25]
+        start_ori = p.getQuaternionFromEuler([0, 0, 0])
+        self.drone = p.loadURDF("../assets/quadrotor.urdf", basePosition=start_pos, baseOrientation=start_ori)
+        
+        #Reset step counter
+        self.step_counter = 0 
 
+        #Get new observations
         obs = self._get_obs()
         return obs, {}
 
     def step(self, action):
-        self.step_counter += 1 #Start counting how long the episode is
+       
+       #Track steps per episode
+        self.step_counter += 1 
+        
         # Apply motor forces
         for i in range(4):
-            p.applyExternalForce(self.drone, -1, [0, 0, action[i] * 10], [0, 0, 0], p.LINK_FRAME)
+            p.applyExternalForce(self.drone, -1, [0, 0, action[i] * 100], [0, 0, 0], p.LINK_FRAME)
 
+        # This enacts the next frame in the simulation
         p.stepSimulation()
+        # Slows render so that it can be observed
         if self.render:
             time.sleep(1./240.)
-
+        
+        # Get X,Y,Z position
+        # Get new obserations after simulation step
         obs = self._get_obs()
+        target = np.array([0.0, 0.0, 1.0])  # desired position
+        pos = obs[:3]  # assuming obs[0:3] = [x, y, z]
+        reward = -np.linalg.norm(pos - target)
 
-        z = obs[2]  # current altitude
-        reward = -abs(z - 1.0)  # reward for staying close to z=1.0
-
-        # Terminate if drone crashes or flies too high
-        terminated = (z < 0.1) or (z > 2.0)
-        # print(f'Step: {self.step_counter}')
-        # if (z < 0.1): 
-        #     print('💥 CRASH!!!')
-        # elif (z > 2.0): 
-        #     print('🚀 TOO High!!!')
+        # Terminatation positions
+        x,y,z = obs[:3]
+        terminated_x = (-1.0 > x) or (x > 1.0)
+        terminated_y = (-1.0 > y) or (y > 1.0)
+        terminated_z = (z < 0.1) or (z > 2.0)
+        terminated = terminated_x or terminated_y or terminated_z
+        
+        print(f'Step: {self.step_counter}')
+        
+        #Check for X movement
+        if (x < -1): 
+            print('-X-X-X-X-X-X-X')
+        elif (x > 1.0): 
+            print('+X+X+X+X+X+X+X')
+        #Check for Y movement
+        if (y < -1): 
+            print('-Y-Y-Y-Y-Y-Y-Y')
+        elif (y > 1.0): 
+            print('+Y+Y+Y+Y+Y+Y+Y')
+        #Check for Altitude
+        if (z < 0.1): 
+            print('💥 CRASH!!!')
+        elif (z > 2.0): 
+            print('🚀 TOO High!!!')
         
         # To control how many steps are okay in an episode. 
         truncated = self.step_counter >= self.max_steps

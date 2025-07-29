@@ -13,10 +13,11 @@ start = time.time()
 env = DummyVecEnv([lambda: DroneEnv(render=False)])
 
 model = PPO("MlpPolicy", env, verbose=1, device="cpu")
-model.learn(total_timesteps=100_000)
+model.learn(total_timesteps=100000)
 
 end = time.time() 
 print(f'Time elapsed: {end-start:.2f} seconds') 
 
-model.save(f"agents/ppo_{datetime.now()}")
+model_name = input("Enter model name: ")
+model.save(f"model_{model_name}")
 env.close()

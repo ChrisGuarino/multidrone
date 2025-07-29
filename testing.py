@@ -8,7 +8,7 @@ def main():
     env = DroneEnv(render=True)
 
     # Load trained model
-    model = PPO.load("agents/ppo_2025-07-28 14:02:48.906766", env=env)
+    model = PPO.load("model_100_000.zip", env=env)
 
     # Reset environment
     obs, info = env.reset()
