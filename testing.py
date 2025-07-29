@@ -1,14 +1,15 @@
-# testing.py
 from stable_baselines3 import PPO
-from envs.pybullet_env import DroneEnv  # adjust import to your actual environment file
+from pybullet_env import DroneEnv
 import time
 
 def main():
     # Create your environment
-    env = DroneEnv(render=True)
+    env = DroneEnv(render=False)
+    env.max_steps = 10000
 
     # Load trained model
-    model = PPO.load("model_100_000.zip", env=env)
+    which_model = input('Which model?: ')
+    model = PPO.load(f"agents/model_{which_model}.zip", env=env)
 
     # Reset environment
     obs, info = env.reset()

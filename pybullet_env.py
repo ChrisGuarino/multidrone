@@ -4,18 +4,23 @@ import numpy as np
 import pybullet as p
 import pybullet_data
 import time
+import matplotlib.pyplot as plt
 
 class DroneEnv(gym.Env):
     def __init__(self, render=False):
         super().__init__()
 
-        self.max_steps = 200
+        self.max_steps = 10000
+        self.reward_track = []
+        
+        # Connect renderer
         self.render = render
         if self.render:
             self.client = p.connect(p.GUI)
         else:
             self.client = p.connect(p.DIRECT)
         
+        # Establish Gravity
         p.setAdditionalSearchPath(pybullet_data.getDataPath())
         p.setGravity(0, 0, -9.81)
         
@@ -33,11 +38,10 @@ class DroneEnv(gym.Env):
         # Observation: position (x,y,z), orientation (roll,pitch,yaw)
         self.observation_space = spaces.Box(low=-np.inf, high=np.inf, shape=(6,), dtype=np.float32)
 
-        # Load plane and drone
-        # self.stage = p.loadURDF("/Users/chrisguarino/Documents/Programming/multidrone/assets/stage.urdf")
+        # Load Mesh and Collisions
         col_id = p.createCollisionShape(
             shapeType=p.GEOM_MESH,
-            fileName="../assets/platform.stl",
+            fileName="/assets/platform.stl",
             meshScale=[1.5, 1.5, 1.5],
             flags=p.GEOM_FORCE_CONCAVE_TRIMESH
         )
@@ -46,19 +50,19 @@ class DroneEnv(gym.Env):
             baseCollisionShapeIndex=col_id,
             basePosition=[0, 0, 0]
         )
-        self.drone = p.loadURDF("../assets/quadrotor.urdf")
+        self.drone = p.loadURDF("/assets/quadrotor.urdf")
         print(p.getCollisionShapeData(self.stage, -1))
 
     def reset(self, *, seed=None, options=None):
         
+        # Resestablish Gravity and reset sim
         p.resetSimulation()
         p.setGravity(0, 0, -9.81)
 
-        #Reset up the stage. 
-        # self.stage = p.loadURDF("/Users/chrisguarino/Documents/Programming/multidrone/assets/stage.urdf", useMaximalCoordinates=True)
+        #Reset the Mesh and Collisions
         col_id = p.createCollisionShape(
             shapeType=p.GEOM_MESH,
-            fileName="../assets/platform.stl",
+            fileName="/assets/platform.stl",
             meshScale=[1.5, 1.5, 1.5],
             flags=p.GEOM_FORCE_CONCAVE_TRIMESH
         )
@@ -68,15 +72,15 @@ class DroneEnv(gym.Env):
             basePosition=[0, 0, 0]
         )
 
-        #Reset Up drone
+        # Drone Starting position
         start_pos = [0, 0, 0.25]
         start_ori = p.getQuaternionFromEuler([0, 0, 0])
-        self.drone = p.loadURDF("../assets/quadrotor.urdf", basePosition=start_pos, baseOrientation=start_ori)
+        self.drone = p.loadURDF("/assets/quadrotor.urdf", basePosition=start_pos, baseOrientation=start_ori)
         
         #Reset step counter
         self.step_counter = 0 
 
-        #Get new observations
+        #Get starting observations
         obs = self._get_obs()
         return obs, {}
 
@@ -89,8 +93,9 @@ class DroneEnv(gym.Env):
         for i in range(4):
             p.applyExternalForce(self.drone, -1, [0, 0, action[i] * 100], [0, 0, 0], p.LINK_FRAME)
 
-        # This enacts the next frame in the simulation
+        # Steps the Simulation to Next State
         p.stepSimulation()
+        
         # Slows render so that it can be observed
         if self.render:
             time.sleep(1./240.)
@@ -100,17 +105,37 @@ class DroneEnv(gym.Env):
         obs = self._get_obs()
         target = np.array([0.0, 0.0, 1.0])  # desired position
         pos = obs[:3]  # assuming obs[0:3] = [x, y, z]
-        reward = -np.linalg.norm(pos - target)
+        x,y,z = obs[:3] #Unpack for condition flags later
+        
+        ########### REWARD FUNCTIONS ###########
+        distance = np.linalg.norm(pos - target) #calculated distance from target
+        reward = 1.0 - distance # Max reward is 1 when distance is at 0. 
+        reward = max(reward, 0.0) #Returns at worst a 0 for reward
+        if distance < 0.05: #Additional Reward for being close to the target
+            reward += 0.5
+        
+
+        # reward = np.exp(-np.linalg.norm(pos - target)) #Exponential Decay Reward as drone moves away from target. 
+        # if np.linalg.norm(pos - target) < 0.05:
+        #     reward += 0.5
+        # reward -= 0.1 * np.linalg.norm(pos[:2])
+        # if z < 0.2: 
+        #     reward -= 0.1
+        ########################################
 
         # Terminatation positions
-        x,y,z = obs[:3]
         terminated_x = (-1.0 > x) or (x > 1.0)
         terminated_y = (-1.0 > y) or (y > 1.0)
-        terminated_z = (z < 0.1) or (z > 2.0)
+        terminated_z = (z > 2.0)
         terminated = terminated_x or terminated_y or terminated_z
         
-        print(f'Step: {self.step_counter}')
+        # To control how many steps are okay in an episode. 
+        truncated = self.step_counter >= self.max_steps
         
+        if terminated or truncated: 
+            self.reward_track.append(reward)
+        
+        # print(f'Step: {self.step_counter}')
         #Check for X movement
         if (x < -1): 
             print('-X-X-X-X-X-X-X')
@@ -126,10 +151,6 @@ class DroneEnv(gym.Env):
             print('💥 CRASH!!!')
         elif (z > 2.0): 
             print('🚀 TOO High!!!')
-        
-        # To control how many steps are okay in an episode. 
-        truncated = self.step_counter >= self.max_steps
-        
         return obs, reward, terminated, truncated, {}
 
     def _get_obs(self):
@@ -140,6 +161,26 @@ class DroneEnv(gym.Env):
     def close(self):
         p.disconnect(self.client)
 
+def plot_list(values, title="List Plot", xlabel="Index", ylabel="Value", filename="plot.png"):
+    """
+    Plots a list of numeric values and saves it as an image.
+
+    Parameters:
+    - values (list): A list of numeric values to plot
+    - title (str): Plot title
+    - xlabel (str): Label for the x-axis
+    - ylabel (str): Label for the y-axis
+    - filename (str): Filename to save the plot (e.g., "output.png")
+    """
+    plt.figure(figsize=(8, 4))
+    plt.plot(values, marker='o')
+    plt.title(title)
+    plt.xlabel(xlabel)
+    plt.ylabel(ylabel)
+    plt.grid(True)
+    plt.tight_layout()
+    plt.savefig(filename)  # Save the figure
+
 if __name__ == "__main__":
     env = DroneEnv(render=True)
     obs, _ = env.reset()
@@ -147,3 +188,4 @@ if __name__ == "__main__":
         action = env.action_space.sample()
         obs, reward, term, trunc, _ = env.step(action)
         print(obs, reward)
+
