@@ -4,8 +4,8 @@ import time
 
 def main():
     # Create your environment
-    env = DroneEnv(render=False)
-    env.max_steps = 10000
+    env = DroneEnv(render=True)
+    env.max_steps = 1000000
 
     # Load trained model
     which_model = input('Which model?: ')
@@ -22,7 +22,7 @@ def main():
         obs, reward, terminated, truncated, info = env.step(action)
         done = terminated or truncated
 
-        print(obs, reward, terminated, truncated, {})
+        print(f'Timestep: {env.step_counter}', obs, reward, terminated, truncated, {})
     # Cleanup
     env.close()
 
