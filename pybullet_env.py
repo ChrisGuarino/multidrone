@@ -10,7 +10,7 @@ class DroneEnv(gym.Env):
     def __init__(self, render=False):
         super().__init__()
 
-        self.max_steps = 10000
+        self.max_steps = 500 #Best from waht i saw
         self.reward_track = []
         
         # Connect renderer
@@ -97,8 +97,8 @@ class DroneEnv(gym.Env):
         p.stepSimulation()
         
         # Slows render so that it can be observed
-        if self.render:
-            time.sleep(1./240.)
+        # if self.render:
+        #     time.sleep(1./240.)
         
         # Get X,Y,Z position
         # Get new obserations after simulation step
@@ -108,19 +108,18 @@ class DroneEnv(gym.Env):
         x,y,z = obs[:3] #Unpack for condition flags later
         
         ########### REWARD FUNCTIONS ###########
-        distance = np.linalg.norm(pos - target) #calculated distance from target
-        reward = 1.0 - distance # Max reward is 1 when distance is at 0. 
-        reward = max(reward, 0.0) #Returns at worst a 0 for reward
-        if distance < 0.05: #Additional Reward for being close to the target
-            reward += 0.5
-        
-
-        # reward = np.exp(-np.linalg.norm(pos - target)) #Exponential Decay Reward as drone moves away from target. 
-        # if np.linalg.norm(pos - target) < 0.05:
+        # distance = np.linalg.norm(pos - target) #calculated distance from target
+        # reward = 1.0 - distance # Max reward is 1 when distance is at 0. 
+        # reward = max(reward, 0.0) #Returns at worst a 0 for reward
+        # if distance < 0.05: #Additional Reward for being close to the target
         #     reward += 0.5
-        # reward -= 0.1 * np.linalg.norm(pos[:2])
-        # if z < 0.2: 
-        #     reward -= 0.1
+
+        reward = np.exp(-np.linalg.norm(pos - target)) #Exponential Decay Reward as drone moves away from target. 
+        if np.linalg.norm(pos - target) < 0.05:
+            reward += 0.5
+        reward -= 0.1 * np.linalg.norm(pos[:2])
+        if z < 0.2: 
+            reward -= 0.1
         ########################################
 
         # Terminatation positions
