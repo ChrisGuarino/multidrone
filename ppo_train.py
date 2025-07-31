@@ -13,7 +13,7 @@ start = time.time()
 env = DroneEnv(render=False)
 
 model = PPO("MlpPolicy", env, verbose=1, device="cpu")
-model.learn(total_timesteps=100000)
+model.learn(total_timesteps=1_000_000)
 
 end = time.time() 
 print(f'Time elapsed: {end-start:.2f} seconds') 

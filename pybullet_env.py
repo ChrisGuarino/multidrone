@@ -5,12 +5,18 @@ import pybullet as p
 import pybullet_data
 import time
 import matplotlib.pyplot as plt
+import os
+
+#Asset Paths
+ASSET_PATH = os.path.join(os.path.dirname(__file__), "../multidrone/assets/")
+platform_path = os.path.abspath(os.path.join(ASSET_PATH, "platform.stl")).replace("\\", "/")
+drone_path = os.path.abspath(os.path.join(ASSET_PATH, "quadrotor.urdf")).replace("\\", "/")
 
 class DroneEnv(gym.Env):
     def __init__(self, render=False):
         super().__init__()
 
-        self.max_steps = 500 #Best from waht i saw
+        self.max_steps = 500 #Best from what I saw
         self.reward_track = []
         
         # Connect renderer
@@ -36,12 +42,14 @@ class DroneEnv(gym.Env):
         self.action_space = spaces.Box(low=-1.0, high=1.0, shape=(4,), dtype=np.float32)
 
         # Observation: position (x,y,z), orientation (roll,pitch,yaw)
-        self.observation_space = spaces.Box(low=-np.inf, high=np.inf, shape=(6,), dtype=np.float32)
+        #self.observation_space = spaces.Box(low=-np.inf, high=np.inf, shape=(6,), dtype=np.float32)
+        self.observation_space = spaces.Box(low=-1, high=1, shape=(6,), dtype=np.float32) #Normalized
+
 
         # Load Mesh and Collisions
         col_id = p.createCollisionShape(
             shapeType=p.GEOM_MESH,
-            fileName="/assets/platform.stl",
+            fileName=platform_path,
             meshScale=[1.5, 1.5, 1.5],
             flags=p.GEOM_FORCE_CONCAVE_TRIMESH
         )
@@ -50,7 +58,7 @@ class DroneEnv(gym.Env):
             baseCollisionShapeIndex=col_id,
             basePosition=[0, 0, 0]
         )
-        self.drone = p.loadURDF("/assets/quadrotor.urdf")
+        self.drone = p.loadURDF(drone_path)
         print(p.getCollisionShapeData(self.stage, -1))
 
     def reset(self, *, seed=None, options=None):
@@ -62,7 +70,7 @@ class DroneEnv(gym.Env):
         #Reset the Mesh and Collisions
         col_id = p.createCollisionShape(
             shapeType=p.GEOM_MESH,
-            fileName="/assets/platform.stl",
+            fileName=platform_path,
             meshScale=[1.5, 1.5, 1.5],
             flags=p.GEOM_FORCE_CONCAVE_TRIMESH
         )
@@ -75,7 +83,7 @@ class DroneEnv(gym.Env):
         # Drone Starting position
         start_pos = [0, 0, 0.25]
         start_ori = p.getQuaternionFromEuler([0, 0, 0])
-        self.drone = p.loadURDF("/assets/quadrotor.urdf", basePosition=start_pos, baseOrientation=start_ori)
+        self.drone = p.loadURDF(drone_path, basePosition=start_pos, baseOrientation=start_ori)
         
         #Reset step counter
         self.step_counter = 0 
@@ -152,10 +160,26 @@ class DroneEnv(gym.Env):
             print('🚀 TOO High!!!')
         return obs, reward, terminated, truncated, {}
 
-    def _get_obs(self):
+    def _get_obs(self): #Normalized
         pos, orn = p.getBasePositionAndOrientation(self.drone)
         orn_euler = p.getEulerFromQuaternion(orn)
-        return np.array(list(pos) + list(orn_euler[:3]), dtype=np.float32)
+        
+        # Normalize position
+        x = np.clip(pos[0] / 1.5, -1.0, 1.0)
+        y = np.clip(pos[1] / 1.5, -1.0, 1.0)
+        z = np.clip((pos[2] - 1.25) / 1.25, -1.0, 1.0)  # center around z=1.25, scale to [-1,1]
+        
+        # Normalize orientation
+        roll = orn_euler[0] / np.pi
+        pitch = orn_euler[1] / np.pi
+        yaw = orn_euler[2] / np.pi
+        
+        # Clip to [-1, 1]
+        roll = np.clip(roll, -1.0, 1.0)
+        pitch = np.clip(pitch, -1.0, 1.0)
+        yaw = np.clip(yaw, -1.0, 1.0)
+
+        return np.array([x, y, z, roll, pitch, yaw], dtype=np.float32)
 
     def close(self):
         p.disconnect(self.client)
