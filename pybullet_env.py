@@ -105,35 +105,37 @@ class DroneEnv(gym.Env):
         p.stepSimulation()
         
         # Slows render so that it can be observed
-        # if self.render:
-        #     time.sleep(1./240.)
+        if self.render:
+            time.sleep(1./240.)
         
         # Get X,Y,Z position
         # Get new obserations after simulation step
         obs = self._get_obs()
-        target = np.array([0.0, 0.0, 1.0])  # desired position
+        target = np.array([0.0, 0.0, 0.5])  # desired position
         pos = obs[:3]  # assuming obs[0:3] = [x, y, z]
         x,y,z = obs[:3] #Unpack for condition flags later
         
         ########### REWARD FUNCTIONS ###########
-        # distance = np.linalg.norm(pos - target) #calculated distance from target
-        # reward = 1.0 - distance # Max reward is 1 when distance is at 0. 
-        # reward = max(reward, 0.0) #Returns at worst a 0 for reward
-        # if distance < 0.05: #Additional Reward for being close to the target
-        #     reward += 0.5
-
-        reward = np.exp(-np.linalg.norm(pos - target)) #Exponential Decay Reward as drone moves away from target. 
-        if np.linalg.norm(pos - target) < 0.05:
+        distance = np.linalg.norm(pos - target) #calculated distance from target
+        reward = 1.0 - distance # Max reward is 1 when distance is at 0. 
+        reward = max(reward, 0.0) #Returns at worst a 0 for reward
+        if distance < 0.05: #Additional Reward for being close to the target
             reward += 0.5
-        reward -= 0.1 * np.linalg.norm(pos[:2])
-        if z < 0.2: 
-            reward -= 0.1
+
+        # reward = np.exp(-np.linalg.norm(pos - target)) #Exponential Decay Reward as drone moves away from target. 
+        # if np.linalg.norm(pos - target) < 0.05:
+        #     reward += 10
+        # reward -= 0.1 * np.linalg.norm(pos[:2])
+        # if z < 0.2: 
+        #     reward -= 0.1 # penalize crash or too low
+        # if z > 0.5:
+        #     reward -= (z - target) * 2.0  # penalize overshoot
         ########################################
 
         # Terminatation positions
         terminated_x = (-1.0 > x) or (x > 1.0)
         terminated_y = (-1.0 > y) or (y > 1.0)
-        terminated_z = (z > 2.0)
+        terminated_z = (z > 1.0)
         terminated = terminated_x or terminated_y or terminated_z
         
         # To control how many steps are okay in an episode. 
@@ -154,10 +156,11 @@ class DroneEnv(gym.Env):
         elif (y > 1.0): 
             print('+Y+Y+Y+Y+Y+Y+Y')
         #Check for Altitude
-        if (z < 0.1): 
+        if (z < 0.2): 
             print('💥 CRASH!!!')
-        elif (z > 2.0): 
+        elif (z > 1.0): 
             print('🚀 TOO High!!!')
+        print(f'☺️{reward}')
         return obs, reward, terminated, truncated, {}
 
     def _get_obs(self): #Normalized
