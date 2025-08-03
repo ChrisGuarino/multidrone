@@ -1,6 +1,6 @@
 from stable_baselines3 import PPO
 from pybullet_env import DroneEnv
-import time
+import os
 
 def main():
     # Create your environment
@@ -9,7 +9,8 @@ def main():
 
     # Load trained model
     which_model = input('Which model?: ')
-    model = PPO.load(f"agents/model_{which_model}.zip", env=env)
+    ASSET_PATH = os.path.join(os.path.dirname(__file__), "../multidrone/agents/")
+    model = PPO.load(os.path.abspath(os.path.join(ASSET_PATH, f'model_{which_model}')).replace("/", "\\"), env=env)
 
     # Reset environment
     obs, info = env.reset()
@@ -27,4 +28,4 @@ def main():
     env.close()
 
 if __name__ == "__main__":
-    main()
+    main() 

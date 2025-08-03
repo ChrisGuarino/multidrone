@@ -116,20 +116,20 @@ class DroneEnv(gym.Env):
         x,y,z = obs[:3] #Unpack for condition flags later
         
         ########### REWARD FUNCTIONS ###########
-        distance = np.linalg.norm(pos - target) #calculated distance from target
-        reward = 1.0 - distance # Max reward is 1 when distance is at 0. 
-        reward = max(reward, 0.0) #Returns at worst a 0 for reward
-        if distance < 0.05: #Additional Reward for being close to the target
-            reward += 0.5
+        # distance = np.linalg.norm(pos - target) #calculated distance from target
+        # reward = 1.0 - distance # Max reward is 1 when distance is at 0. 
+        # reward = max(reward, 0.0) #Returns at worst a 0 for reward
+        # if distance < 0.05: #Additional Reward for being close to the target
+        #     reward += 0.5
 
-        # reward = np.exp(-np.linalg.norm(pos - target)) #Exponential Decay Reward as drone moves away from target. 
-        # if np.linalg.norm(pos - target) < 0.05:
-        #     reward += 10
-        # reward -= 0.1 * np.linalg.norm(pos[:2])
-        # if z < 0.2: 
-        #     reward -= 0.1 # penalize crash or too low
-        # if z > 0.5:
-        #     reward -= (z - target) * 2.0  # penalize overshoot
+        reward = np.exp(-np.linalg.norm(pos - target)) #Exponential Decay Reward as drone moves away from target. 
+        if np.linalg.norm(pos - target) < 0.05:
+            reward += 10
+        reward -= 0.1 * np.linalg.norm(pos[:2])
+        if z < 0.2: 
+            reward -= 0.1 # penalize crash or too low
+        if z > 0.5:
+            reward -= (z - target[2]) * 2.0  # penalize overshoot
         ########################################
 
         # Terminatation positions
