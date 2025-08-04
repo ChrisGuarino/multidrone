@@ -1,6 +1,6 @@
 from stable_baselines3 import PPO
 from pybullet_env import DroneEnv
-import os
+from pathlib import Path
 
 def main():
     # Create your environment
@@ -8,10 +8,13 @@ def main():
     env.max_steps = 1000000
 
     # Load trained model
+    base_dir = Path(__file__).parent
     which_model = input('Which model?: ')
-    ASSET_PATH = os.path.join(os.path.dirname(__file__), "../multidrone/agents/")
-    model = PPO.load(os.path.abspath(os.path.join(ASSET_PATH, f'model_{which_model}')).replace("/", "\\"), env=env)
+    model_path = base_dir / "agents" / f"model_{which_model}.zip"
 
+    # Convert to string if needed:
+    model = PPO.load(str(model_path), env=env)
+    
     # Reset environment
     obs, info = env.reset()
     done = False

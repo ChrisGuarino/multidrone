@@ -5,12 +5,12 @@ import pybullet as p
 import pybullet_data
 import time
 import matplotlib.pyplot as plt
-import os
+from pathlib import Path
 
 #Asset Paths
-ASSET_PATH = os.path.join(os.path.dirname(__file__), "../multidrone/assets/")
-platform_path = os.path.abspath(os.path.join(ASSET_PATH, "platform.stl")).replace("\\", "/")
-drone_path = os.path.abspath(os.path.join(ASSET_PATH, "quadrotor.urdf")).replace("\\", "/")
+base_dir = Path(__file__).parent
+platform_path = base_dir / "assets" / "platform.stl"
+drone_path = base_dir / "assets" / "quadrotor.urdf"
 
 class DroneEnv(gym.Env):
     def __init__(self, render=False):
