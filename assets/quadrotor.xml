@@ -1,0 +1,53 @@
+<mujoco model="quadrotor_with_platform">
+    <compiler angle="degree" coordinate="local"/>
+    <option timestep="0.002" gravity="0 0 -9.81"/>
+
+    <!-- Assets -->
+    <asset>
+        <mesh name="drone_mesh" file="drone.stl" scale="1 1 1"/>
+        <mesh name="platform_mesh" file="platform.stl" scale="1.5 1.5 1.5"/>
+    </asset>
+
+    <!-- World body -->
+    <worldbody>
+        <!-- Platform -->
+        <body name="platform" pos="0 0 0">
+            <geom name="platform_geom" type="mesh" mesh="platform_mesh"
+                  contype="1" conaffinity="1" rgba="0.3 0.3 0.3 1" condim="3"/>
+        </body>
+
+        <!-- Drone body -->
+        <body name="drone" pos="0 0 0.25">
+            <!-- Free joint for full 6DOF motion -->
+            <joint name="root" type="free"/>
+            <inertial pos="0 0 0" mass="0.5" diaginertia="0.0023 0.0023 0.004"/>
+            <geom name="drone_geom" type="mesh" mesh="drone_mesh"
+                  rgba="0.8 0.1 0.1 1" contype="1" conaffinity="1" condim="3"/>
+
+            <!-- Rotor attachment points -->
+            <site name="rotor1_site" pos="0.175 0.175 0" size="0.01" rgba="0 0 1 1"/>
+            <site name="rotor2_site" pos="-0.175 0.175 0" size="0.01" rgba="0 1 0 1"/>
+            <site name="rotor3_site" pos="-0.175 -0.175 0" size="0.01" rgba="1 0 0 1"/>
+            <site name="rotor4_site" pos="0.175 -0.175 0" size="0.01" rgba="1 1 0 1"/>
+        </body>
+    </worldbody>
+
+    <!-- Actuators -->
+    <actuator>
+        <!-- Rotor 1 (CW) -->
+        <motor name="rotor1_thrust" gear="0 0 1" site="rotor1_site" ctrlrange="0 5"/>
+        <motor name="rotor1_torque" gear="0 0 0.02" site="rotor1_site" ctrlrange="-0.1 0.1"/>
+
+        <!-- Rotor 2 (CCW) -->
+        <motor name="rotor2_thrust" gear="0 0 1" site="rotor2_site" ctrlrange="0 5"/>
+        <motor name="rotor2_torque" gear="0 0 -0.02" site="rotor2_site" ctrlrange="-0.1 0.1"/>
+
+        <!-- Rotor 3 (CW) -->
+        <motor name="rotor3_thrust" gear="0 0 1" site="rotor3_site" ctrlrange="0 5"/>
+        <motor name="rotor3_torque" gear="0 0 0.02" site="rotor3_site" ctrlrange="-0.1 0.1"/>
+
+        <!-- Rotor 4 (CCW) -->
+        <motor name="rotor4_thrust" gear="0 0 1" site="rotor4_site" ctrlrange="0 5"/>
+        <motor name="rotor4_torque" gear="0 0 -0.02" site="rotor4_site" ctrlrange="-0.1 0.1"/>
+    </actuator>
+</mujoco>
