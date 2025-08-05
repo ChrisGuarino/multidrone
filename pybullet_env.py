@@ -45,11 +45,18 @@ class DroneEnv(gym.Env):
         #self.observation_space = spaces.Box(low=-np.inf, high=np.inf, shape=(6,), dtype=np.float32)
         self.observation_space = spaces.Box(low=-1, high=1, shape=(6,), dtype=np.float32) #Normalized
 
+        # Define locations of drone props
+        self.motor_positions = [
+        [ 0.1,  0.1, 0],  # front right
+        [-0.1,  0.1, 0],  # front left
+        [-0.1, -0.1, 0],  # rear left
+        [ 0.1, -0.1, 0],  # rear right
+        ]
 
         # Load Mesh and Collisions
         col_id = p.createCollisionShape(
             shapeType=p.GEOM_MESH,
-            fileName=platform_path,
+            fileName=str(platform_path),
             meshScale=[1.5, 1.5, 1.5],
             flags=p.GEOM_FORCE_CONCAVE_TRIMESH
         )
@@ -58,7 +65,7 @@ class DroneEnv(gym.Env):
             baseCollisionShapeIndex=col_id,
             basePosition=[0, 0, 0]
         )
-        self.drone = p.loadURDF(drone_path)
+        self.drone = p.loadURDF(str(drone_path))
         print(p.getCollisionShapeData(self.stage, -1))
 
     def reset(self, *, seed=None, options=None):
@@ -70,7 +77,7 @@ class DroneEnv(gym.Env):
         #Reset the Mesh and Collisions
         col_id = p.createCollisionShape(
             shapeType=p.GEOM_MESH,
-            fileName=platform_path,
+            fileName=str(platform_path),
             meshScale=[1.5, 1.5, 1.5],
             flags=p.GEOM_FORCE_CONCAVE_TRIMESH
         )
@@ -83,7 +90,7 @@ class DroneEnv(gym.Env):
         # Drone Starting position
         start_pos = [0, 0, 0.25]
         start_ori = p.getQuaternionFromEuler([0, 0, 0])
-        self.drone = p.loadURDF(drone_path, basePosition=start_pos, baseOrientation=start_ori)
+        self.drone = p.loadURDF(str(drone_path), basePosition=start_pos, baseOrientation=start_ori)
         
         #Reset step counter
         self.step_counter = 0 
@@ -97,16 +104,28 @@ class DroneEnv(gym.Env):
        #Track steps per episode
         self.step_counter += 1 
         
-        # Apply motor forces
+        # Apply motor forces Single Center Thruster
+        # for i in range(4):
+        #     p.applyExternalForce(self.drone, -1, [0, 0, action[i] * 100], [0, 0, 0], p.LINK_FRAME)
+
+        # 4 Thrusters
         for i in range(4):
-            p.applyExternalForce(self.drone, -1, [0, 0, action[i] * 100], [0, 0, 0], p.LINK_FRAME)
+            force = [0, 0, action[i] * 100]  # upward thrust
+            pos = self.motor_positions[i]
+            p.applyExternalForce(
+                objectUniqueId=self.drone,
+                linkIndex=-1,  # base link
+                forceObj=force,
+                posObj=pos,
+                flags=p.LINK_FRAME
+            )
 
         # Steps the Simulation to Next State
         p.stepSimulation()
         
         # Slows render so that it can be observed
-        if self.render:
-            time.sleep(1./240.)
+        # if self.render:
+        #     time.sleep(1./240.)
         
         # Get X,Y,Z position
         # Get new obserations after simulation step
@@ -122,14 +141,28 @@ class DroneEnv(gym.Env):
         # if distance < 0.05: #Additional Reward for being close to the target
         #     reward += 0.5
 
-        reward = np.exp(-np.linalg.norm(pos - target)) #Exponential Decay Reward as drone moves away from target. 
-        if np.linalg.norm(pos - target) < 0.05:
-            reward += 10
+        dist_to_target = np.linalg.norm(pos - target)
+        reward = np.exp(-dist_to_target)
         reward -= 0.1 * np.linalg.norm(pos[:2])
+
+        # Crash / overshoot penalties
         if z < 0.2: 
-            reward -= 0.1 # penalize crash or too low
+            reward -= 0.1
         if z > 0.5:
-            reward -= (z - target[2]) * 2.0  # penalize overshoot
+            reward -= (z - target[2]) * 2.0
+
+        # Time penalty
+        reward -= 0.001 * self.step_counter
+
+        # Arrival bonuses
+        if dist_to_target < 0.05:
+            reward += max(2.0 - 0.01 * self.step_counter, 0)
+        if dist_to_target < 0.02:
+            reward += 0.2
+            lin_vel, _ = p.getBaseVelocity(self.drone)
+            if np.linalg.norm(lin_vel) < 0.05:
+                reward += 0.2
+
         ########################################
 
         # Terminatation positions
@@ -156,11 +189,11 @@ class DroneEnv(gym.Env):
         elif (y > 1.0): 
             print('+Y+Y+Y+Y+Y+Y+Y')
         #Check for Altitude
-        if (z < 0.2): 
+        if (z < 0.1): 
             print('💥 CRASH!!!')
         elif (z > 1.0): 
             print('🚀 TOO High!!!')
-        print(f'☺️{reward}')
+        print(f'☺️ REWARD: {reward}')
         return obs, reward, terminated, truncated, {}
 
     def _get_obs(self): #Normalized
