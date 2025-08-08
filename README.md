@@ -81,3 +81,5 @@
 - 📚 Survey of related papers
 
 ---
+# Notes: 
+- 08/07/25: So we have a PPO training seemingly working. Using Mujoco sim and StableBaseline3 for training the PPO. I mean it runs. I can run multiple env in parallel using SubprocVecEnv in Stable Baseline 3. The drone after training for 1M timesteps is just floating around still. 

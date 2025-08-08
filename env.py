@@ -45,10 +45,16 @@ class DroneEnv(gym.Env):
         # --- Convert agent's 4 thrust actions into rotor forces ---
         max_thrust = 5.0  # N
         thrusts = np.clip((action + 1) / 2 * max_thrust, 0, max_thrust)
-
+        
+        # Add torque control — just like before
+        torque_dirs = np.array([+1, -1, +1, -1], dtype=np.float32)
+        torque_coeff = 0.02  # Tune this if too wobbly
+        torques = torque_dirs * thrusts * torque_coeff
+        
         # Create full control array (8 actuators: 4 thrust, 4 torque)
         ctrl = np.zeros(8, dtype=np.float32)
-        ctrl[:4] = thrusts  # first 4: thrust motors, last 4: torque motors (zeroed)
+        ctrl[:4] = thrusts  # first 4: thrust motors, last 4)
+        ctrl[4:8] = torques # last 4: torque motors
         self.data.ctrl[:] = ctrl
 
         # Step the simulation
@@ -83,7 +89,7 @@ class DroneEnv(gym.Env):
         terminated = (
             (x < -1.0) or (x > 1.0) or
             (y < -1.0) or (y > 1.0) or
-            (z > 1.0)
+            (z < -1.0) or (z > 1.0)
         )
         truncated = self.step_counter >= self.max_steps
 
@@ -119,7 +125,7 @@ class DroneEnv(gym.Env):
             self.viewer.close()
 
 if __name__ == "__main__":
-    env = DroneEnv(render=True)
+    env = DroneEnv(render=False)
     obs, _ = env.reset()
     for _ in range(10000):
         action = env.action_space.sample()

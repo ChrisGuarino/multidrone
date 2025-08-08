@@ -29,7 +29,7 @@ if __name__ == "__main__":
         n_epochs=10
     )
 
-    model.learn(total_timesteps=1_000_000)  # Train for 1M steps total
+    model.learn(total_timesteps=200_000)  # Train for 1M steps total
     model_name = input("Enter model name: ")
     # plot_list(env.reward_track, filename=f'agents/plot_{model_name}.png')
     model.save(f"agents/model_{model_name}")

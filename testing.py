@@ -42,7 +42,7 @@ from pathlib import Path
 base_dir = Path(__file__).parent
 which_model = input('Which model?: ')
 model_path = base_dir / "agents" / f"model_{which_model}.zip"
-env = DroneEnv(render=False)
+env = DroneEnv(render=True)
 
 model = PPO.load(model_path, env=env)
 
