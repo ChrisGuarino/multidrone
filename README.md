@@ -1,85 +1,74 @@
-# 📄 Project Proposal  
-## **Multi-Agent Drone Navigation with LLM-Guided Reasoning: Exploring Non-Stationarity in Multi-Agent RL**
+# Multidrone
 
----
+PPO-based reinforcement learning for quadrotor drone flight control using MuJoCo physics simulation and Stable-Baselines3.
 
-## 🎯 Motivation
-- Modern RL is effective in **stationary single-agent environments**, but struggles in **non-stationary, multi-agent settings**.  
-- The rise of **agentic AI** — autonomous agents reasoning and interacting with each other — is a hot direction in industry and research, including at IBM.  
-- This project explores a realistic, interactive scenario: **multiple drones navigating a shared environment while reasoning about other agents.**
-- Optional: Integrate **LLM-based reasoning** to complement RL policy and mitigate non-stationarity.
+## Overview
 
----
+A custom Gymnasium environment simulates a quadrotor with 4 thrust actuators in MuJoCo. A PPO agent learns to stabilize and navigate the drone to a target hover position through reward shaping on position, orientation, and crash penalties.
 
-## 🧩 Goals
-- ✅ Build a simulated multi-agent environment (e.g., drones navigating a warehouse).  
-- ✅ Implement and compare several training strategies:
-  - Independent RL agents (e.g., Q-learning, PPO) — *baseline*
-  - Centralized training, decentralized execution (CTDE)
-  - LLM-guided agents that reason about the intentions of others  
-- ✅ Quantify the effects of **non-stationarity**.  
-- ✅ Experiment with equilibria concepts (e.g., Nash equilibrium, best-response dynamics).
+## Environment
 
----
+| Property | Details |
+|----------|---------|
+| **Action space** | Continuous, 4D (per-rotor thrust commands) |
+| **Observation space** | 6D (x, y, z position + roll, pitch, yaw) |
+| **Target** | Hover at (0, 0, 0.5) |
+| **Max steps** | 500 per episode |
+| **Physics** | MuJoCo with 4 thrust + 4 torque actuators |
 
-## 🔷 Environment
-- **Simulator options:**
-  - [Gymnasium](https://gymnasium.farama.org/) + [PettingZoo](https://pettingzoo.farama.org/) (multi-agent friendly, quick to set up)  
-  - [AirSim](https://microsoft.github.io/AirSim/) or [Colosseum](https://github.com/CodexLabsLLC/Colosseum) (realistic drone physics and visuals)
+## Requirements
 
-- **Observation space:**  
-  Drone’s own position, velocity, distance to other drones, map occupancy grid.
+```
+gymnasium
+stable_baselines3
+mujoco
+mujoco_viewer
+scipy
+numpy
+torch
+pybullet
+```
 
-- **Action space:**  
-  Discrete (e.g., turn left/right, move forward/stop) or continuous (e.g., thrust vector, yaw rate).
+Install with:
+```bash
+pip install -r requirements.txt
+```
 
----
+## Usage
 
-## 🧠 Agent Architectures
+```bash
+# Train with a single environment
+python ppo_train.py
 
-| Approach              | Description |
-|-----------------------|-------------|
-| **Independent RL**    | Each drone runs its own policy, ignoring others |
-| **Centralized RL**    | One policy that takes all agents’ states into account |
-| **LLM-guided RL**     | Each agent queries an LLM for reasoning about others |
-| **Game-theoretic RL** | Agents use best-response dynamics or fictitious play to converge to equilibria |
+# Train with 8 parallel environments (faster)
+python train_drone_parallel.py
 
-### Example LLM prompt:
- 'Given my position X and the positions of drones Y1, Y2, Y3, what should I do to minimize collisions and reach the goal?'
+# Test a trained model with visualization
+python testing.py
+```
 
----
+Trained models are saved to `agents/`.
 
-## 📊 Metrics to Evaluate
-- Average time to reach goal  
-- Collision rate  
-- Policy stability over training episodes  
-- Reward evolution over time
+## Project Structure
 
----
+```
+multidrone/
+├── env.py                    # Custom Gymnasium quadrotor environment
+├── ppo_train.py              # Single-environment PPO training
+├── train_drone_parallel.py   # Parallel training (8x SubprocVecEnv)
+├── testing.py                # Model evaluation with rendering
+├── multi_drone_env.py        # Multi-drone environment (WIP)
+├── 3D/                       # MuJoCo model files (MJCF/XML)
+├── agents/                   # Saved model checkpoints
+├── assets/                   # Additional resources
+├── requirements.txt
+└── README.md
+```
 
-## 🛠️ Why This Aligns with IBM Strategic Directions
-- ✅ **Agentic AI:** multi-agent autonomy focus  
-- ✅ **RL for reasoning:** augment RL with LLM reasoning  
-- ✅ **Fundamental RL research:** stability in non-stationary environments  
+## Training Details
 
----
-
-## 🪜 Next Steps
-1. Choose a simulator: Gym (fast) vs AirSim/Colosseum (realistic).  
-2. Define the multi-agent task and specify observation/action spaces.  
-3. Build baseline RL agents and environment.  
-4. Implement LLM-guided policy integration.  
-5. Run experiments comparing all approaches.  
-6. Analyze convergence, stability, and equilibria.
-
----
-
-## 🔗 Optional: Deliverables
-- 📄 1-page formal proposal document (optional)  
-- 🧰 Suggested libraries and setup commands  
-- 📝 Example training loop outline in code  
-- 📚 Survey of related papers
-
----
-# Notes: 
-- 08/07/25: So we have a PPO training seemingly working. Using Mujoco sim and StableBaseline3 for training the PPO. I mean it runs. I can run multiple env in parallel using SubprocVecEnv in Stable Baseline 3. The drone after training for 1M timesteps is just floating around still. 
+- **Algorithm:** PPO (Proximal Policy Optimization)
+- **Timesteps:** 200k default
+- **Rollout:** 2048 steps per update
+- **Parallelization:** Optional 8-environment SubprocVecEnv for faster training
+- **Reward:** Position error penalty + orientation penalty + crash penalty + time penalty
